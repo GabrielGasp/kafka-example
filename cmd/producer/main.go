@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
@@ -14,21 +15,23 @@ func main() {
 	}
 	defer producer.Close()
 
-	deliveryChan := make(chan kafka.Event)
-
 	users, err := GetUsers()
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	deliveryChan := make(chan kafka.Event)
+
+	go ReportDelivery(deliveryChan)
 
 	for _, user := range users {
 		err = Produce(user.Name, "users", producer, []byte(user.ID), deliveryChan)
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
 
-	go ReportDelivery(deliveryChan)
+		time.Sleep(10 * time.Millisecond) // Sleep between each message to make communication more visible
+	}
 
 	// Block forever
 	select {}
